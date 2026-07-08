@@ -1,0 +1,111 @@
+url: https://beeamerino.github.io/CactusPhylo/
+template:
+  bootstrap: 5
+  bootswatch: yeti
+navbar:
+  structure:
+    left:
+    - intro
+    - reference
+    - articles
+    - news
+    right: github
+  components:
+    intro:
+      text: Get Started
+      href: articles/CactusPhylo.html
+    reference:
+      text: Reference Manual
+      href: reference/index.html
+    articles:
+      text: Vignettes
+      menu:
+      - text: 1. Data Assembly & Preparation
+        href: articles/tutorial-1-cactus-phylogeny-prep.html
+      - text: 2. Inference & Dating
+        href: articles/tutorial-2-cactus-phylogeny-inference.html
+      - text: 3. Visualization & IUCN Summary
+        href: articles/tutorial-3-cactus-phylogeny-visualization.html
+      - text: 4. Phylogenetic Validation
+        href: articles/tutorial-4-cactus-phylogeny-validation.html
+      - text: 5. Internal Functions Guide
+        href: articles/tutorial-5-cactus-phylogeny-functions.html
+reference:
+- title: Sequence Assemblies & PhylotaR Import
+  desc: Functions to setup databases, pull taxonomic clusters, and download GenBank
+    accessions safely.
+  contents:
+  - assemble_ingroup_phylotar
+  - assemble_outgroup_phylotar
+  - fetch_genbank_metadata
+- title: Taxonomic Cleaning & Reconciliations
+  desc: Check name spelling, audit duplicates, and verify records against checklists.
+  contents:
+  - clean_taxonomic_names
+  - integrate_and_clean_markers
+- title: Multiple Alignment, DECIPHER Cleaners, & Masking
+  desc: Run system MAFFT and refine aligned nucleotides using gap-masking procedures.
+  contents:
+  - run_mafft
+  - run_alignment_pipeline
+  - run_joint_realignment
+- title: Locus Quality Control & Saturation Screening
+  desc: Detect distance outliers and perform saturation regression checks.
+  contents: run_marker_screening
+- title: Concatenation and Partitioning Maps
+  desc: Bind loci end-to-end to assemble a master phylogenetic matrix and export format
+    partitions.
+  contents: run_concatenation_pipeline
+- title: Phylogenetic Search & Constrained Inference
+  desc: Run model testers (ModelTest-NG) and ML estimations (RAxML-NG) guided by Newick
+    scaffolds.
+  contents:
+  - preprocess_partitions
+  - run_modeltest_ng
+  - build_constraint_scaffold
+  - calculate_ml_tree
+  - calculate_rf_distances
+  - generate_bootstrap_script
+  - run_local_bootstraps
+  - collect_bootstraps
+  - check_bs_convergence
+  - calculate_temporal_bootstraps
+  - map_branch_supports
+- title: Chronological Dating & treePL Automation
+  desc: Automated treePL cross-validation and chronological calibrations over bootstrap
+    cohorts.
+  contents:
+  - rescale_tree
+  - run_treePL
+  - run_treePL_direct
+  - automate_treePL
+- title: Multi-Scale Topologies Validation
+  desc: Compare comparative tree structures using Robinson-Foulds, DPI, and project
+    into 2D MDS scopes.
+  contents: validate_phylogenies
+- title: Manuscript Figures & Publication Polish
+  desc: Integrate final results, apply editorial clade collapses, and draw SVG/PDF
+    panels.
+  contents: integrate_publication_tree
+- title: IUCN Conservation Metadata
+  desc: Extract threat metrics and habitats using rredlist and map color scales for
+    plotting.
+  contents:
+  - get_iucn_data
+  - scale_fill_iucn
+- title: Internal Tools and Visualization Helpers
+  desc: Internal functions for phylogenetic visualization and data preparation.
+  contents:
+  - add_clade_labels_by_level
+  - apply_clade_label_layers
+  - assert_constraint_columns
+  - augment_treedata_with_registry
+  - build_annotation_registry
+  - compute_group_nodes
+  - get_annotation_nodes
+  - prepare_tip_annotation
+  - standardize_taxon
+  - get_tree_max_depth
+  - format_age_labels
+  - add_chronogram_axis
+

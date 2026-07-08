@@ -1,0 +1,14 @@
+mrca,column,value,min,max,reference,used_in_analysis
+Cactaceae_mrca,Family,Cactaceae,21.9507157,48.51200049,Ramirez-Barahona,TRUE
+Anacampserotaceae_mrca,Family,Anacampserotaceae,21.9507157,48.51200049,Ramirez-Barahona,TRUE
+Portulacaceae_mrca,Family,Portulacaceae,27.80801619,53.37456058,Ramirez-Barahona,TRUE
+Cactaceae_mrca,Family,Cactaceae,22.71,42.43,Hernandez-Hernandez,FALSE
+Cactaceae_mrca,Family,Cactaceae,32.4,37.6,Arakaki,FALSE
+Pereskia_mrca,Subfam,Pereskia,16.68,28.46,Hernandez-Hernandez,FALSE
+Opuntioideae_mrca,Subfam,Opuntioideae,13.33,26.54,Hernandez-Hernandez,TRUE
+Opuntioideae_mrca,Subfam,Opuntioideae,24.1,26.5,Arakaki,FALSE
+Maihuenioideae_mrca,Subfam,Maihuenioideae,15.35,28.25,Hernandez-Hernandez,FALSE
+Maihuenioideae_mrca,Subfam,Maihuenioideae,24.1,26.5,Arakaki,FALSE
+Cactoideae_mrca,Subfam,Cactoideae,12.67,24.46,Hernandez-Hernandez,TRUE
+Cactoideae_mrca,Subfam,Cactoideae,23.4,25.4,Arakaki,FALSE
+Cacteae_mrca,Clade,Cacteae,10.94,21.85,Hernandez-Hernandez,TRUE

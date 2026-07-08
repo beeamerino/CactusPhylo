@@ -1,0 +1,53 @@
+Package: CactusPhylo
+Type: Package
+Title: Phylogenetic Inference and Divergence Time Estimation Pipeline for Cactaceae
+Version: 0.1.0
+Author: Beatriz M. Meriño <b.vergara.m@gmail.com> [aut, cre]
+Maintainer: Beatriz M. Meriño <b.vergara.m@gmail.com>
+Description: Provides a reproducible workflow for reconstructing Cactaceae phylogenies from DNA sequence data. The pipeline automates GenBank sequence  retrieval, multiple-sequence alignment, substitution model selection, saturation assessment, supermatrix construction, maximum-likelihood phylogenetic inference using RAxML-NG, divergence time estimation with treePL, and tree-space analyses for assessing phylogenetic stability across bootstrap replicates.
+URL: https://github.com/beeamerino/CactusPhylo, https://beeamerino.github.io/CactusPhylo, https://beeamerino.github.io/CactusPhylo/
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 4.1.0)
+Imports:
+    phytools,
+    tidytree,
+    grDevices,
+    grid,
+    stats,
+    tools,
+    utils,
+    ape,
+    phangorn,
+    DECIPHER,
+    Biostrings,
+    dplyr,
+    tidyr,
+    stringr,
+    purrr,
+    readr,
+    readxl,
+    ggplot2,
+    ggtree,
+    patchwork,
+    TreeDist,
+    ggrepel,
+    cowplot,
+    tibble,
+    seqinr,
+    phylotaR
+Suggests:
+    forcats,
+    scales,
+    taxize,
+    rredlist,
+    knitr,
+    rmarkdown,
+    openxlsx,
+    pkgdown,
+    treeio
+VignetteBuilder: knitr
+BugReports: https://github.com/beeamerino/CactusPhylo/issues
+Remotes: ropensci/phylotaR
+Config/roxygen2/version: 8.0.0

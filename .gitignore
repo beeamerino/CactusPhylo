@@ -1,0 +1,55 @@
+# RStudio
+.Rproj.user/
+CactusPhylo.Rproj
+
+# Historial
+.Rhistory
+.RData
+.Ruserdata
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Entornos
+.Renviron
+.env
+
+# cache
+*_cache/
+cache/
+
+# Quarto/knitr
+*_files/
+
+# logs
+*.log
+
+# temporales
+*.tmp
+
+# archivos comprimidos
+*.zip
+*.tar.gz
+
+# resultados temporales
+analysis/results/
+
+analysis/tmp/
+docs
+.Rproj.user
+.httr-oauth
+.quarto
+
+# antigravity agents
+.antigravity/
+AGENTS.md
+
+# figures
+man/figures/Fig1*.pdf
+man/figures/Fig1*.jpg
+
+# data-raw scripts
+data-raw/

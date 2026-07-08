@@ -1,0 +1,62 @@
+search,replace
+"internal transcribed spacer 1, internal transcribed spacer 2",ITS
+"18S ribosomal RNA, internal transcribed spacer 1, internal transcribed spacer 2",ITS
+"maturase K, matK",matK
+"matK, maturase K",matK
+maturase K,matK
+"trnK, matK",matK-trnK
+"trnK, maturase K, matK",matK-trnK
+"ribulose-1,5-bisphosphate carboxylase",rbcL
+"ribulose-1,5-bisphosphate carboxylase, rbcL",rbcL
+"atpB, rbcL, ribulose-1,5-bisphosphate carboxylase",rbcL-atpB
+"phytochrome C, phyC",phyC
+phytochrome C,phyC
+"phyC, phytochrome C",phyC
+phosphoenolpyruvate carboxylase,pepC
+"phosphoenolpyruvate carboxylase, ppc-2",pepC
+trnS(GCU)-trnG(UUC),trnS-trnG
+"psbA, psbA-trnH",psbA-trnH
+trnH-psbA,psbA-trnH
+pbsA-trnH,psbA-trnH
+pbsA-trnH,psbA-trnH
+"trnH-psbA, psbA",psbA-trnH
+"psbJ, psbJ-petA",psbJ-petA
+"ndhF, ndhF-rpl32",ndhF-rpl32
+"trnL, trnF",trnL-trnF
+"trnL, trnL-trnF",trnL-trnF
+"trnT, trnL-trnF",trnL-trnF
+"trnL-trnF, phosphoenolpyruvate carboxylase",trnL-trnF
+"trnL, trnL-trnF, trnF",trnL-trnF
+"trnT, trnF",trnT-trnF
+"trnL-trnF, trnF",trnL-trnF
+"trnT, trnL",trnT-trnL
+"trnL, trnT",trnT-trnL
+"psbD, trnT",psbD-trnT
+petL-psbE,psbE-petL
+internal transcribed spacer 1,ITS
+"18S rRNA, 5.8S rRNA, 26S rRNA, ITS1, ITS2",ITS
+"18S rRNA, ITS1, 5.8S rRNA, ITS2, 26S rRNA",ITS
+"18S ribosomal RNA, internal transcribed spacer 1",ITS
+internal transcribed spacer 2,ITS
+rpl16,rpL16
+"rps3, rpL16",rps3-rpL16
+"rps3, rpl16",rps3-rpL16
+"rps3-rpl16, rpl16",rps3-rpL16
+"rps3-rpl16, rpL16",rps3-rpL16
+"rpS16","rps16"
+nhx1,NHX
+trnS(GCU)-trnG(UUC),trnS-trnG
+trnS(GCU)-trnG(UUC),trnS-trnG
+trnS,trnS-trnG
+trnG,trnS-trnG
+trnS(GCU)-trnG(UUC),trnS-trnG
+trnS(GCU)-trnG(UUC),trnS-trnG
+trnS(GCU)-trnG(UUC),trnS-trnG
+trnS-trnG,trnS-trnG
+"trnT, trnT-psbD, psbD", "trnT-psbD"
+"rpl14, rpl14-rps8, rps8", "rps8-rpl14"
+"18S rRNA, ITS1, 5.8S rRNA, ITS2", "ITS"
+"atpI-atpH, atpI", "atpI-atpH"
+"4,5-dioxygenase-like", "pepC-like"
+"cytochrome P450 76AD1", "pepC-like"
+"atpI, atpI-atpH", "atpI-atpH"

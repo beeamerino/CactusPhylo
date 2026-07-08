@@ -1,0 +1,771 @@
+#' Comparative Tree space validation pipeline
+#'
+#' @param trees_mapping_list Named list of trees.
+#' @param checklist_csv Character. Spellings check list CSV.
+#' @param constraints_map Character. Taxonomy mapping table.
+#' @param out_dir Character. Destination folder.
+#' @return Generates tree distance results and tree-space coordinates.
+#' @importFrom phytools reroot
+#' @importFrom tidytree as_tibble
+#' @importFrom grDevices pdf
+#' @importFrom grid grid.newpage
+#' @importFrom stats quantile
+#' @importFrom tools file_path_sans_ext
+#' @importFrom utils write.csv
+#' @importFrom phangorn dist.ml
+#' @importFrom DECIPHER AlignSeqs
+#' @importFrom Biostrings writeXStringSet
+#' @importFrom tidyr pivot_wider
+#' @importFrom stringr str_replace_all
+#' @importFrom purrr map
+#' @importFrom readr read_csv
+#' @importFrom readxl read_excel
+#' @importFrom patchwork wrap_plots
+#' @importFrom TreeDist DifferentPhylogeneticInfo
+#' @importFrom ggrepel geom_text_repel
+#' @importFrom cowplot plot_grid
+#' @importFrom tibble tibble
+#' @importFrom seqinr write.fasta
+#' @importFrom phylotaR setup
+#' @importFrom ape read.tree
+#' @importFrom dplyr filter
+#' @importFrom ggplot2 ggplot
+#' @importFrom ggtree ggtree
+#
+#' @export
+validate_phylogenies <- function(trees_mapping_list, checklist_csv, constraints_map, out_dir) {
+  
+  
+  OUT_TABLES  <- file.path(out_dir, "tables")
+  OUT_FIGURES <- file.path(out_dir, "figures")
+  OUT_TREES   <- file.path(out_dir, "trees")
+  OUT_LOGS    <- file.path(out_dir, "logs")
+  
+  dir.create(OUT_TABLES, recursive = TRUE, showWarnings = FALSE)
+  dir.create(OUT_FIGURES, recursive = TRUE, showWarnings = FALSE)
+  dir.create(OUT_TREES, recursive = TRUE, showWarnings = FALSE)
+  dir.create(OUT_LOGS, recursive = TRUE, showWarnings = FALSE)
+  
+  tree_palette <- c(
+    FocalTree = "#1b9e77",
+    Thompson  = "#d95f02",
+    Amaral    = "#7570b3",
+    deVos     = "#e7298a"
+  )
+  
+  base_theme <- ggplot2::theme_minimal(base_size = 12) +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),
+      axis.title = ggplot2::element_text(face = "bold"),
+      legend.position = "bottom",
+      legend.title = ggplot2::element_text(face = "bold"),
+      panel.grid.minor = ggplot2::element_blank()
+    )
+  
+  standardize_taxon <- function(x) {
+    x |>
+      stringr::str_replace_all("[[:space:]-]+", "_") |>
+      stringr::str_replace_all("_+", "_") |>
+      stringr::str_replace_all("^_|_$", "")
+  }
+  
+  extract_genus <- function(x) sub("_.*", "", x)
+  
+  safe_drop_tip <- function(tree, tips_to_remove) {
+    tips_to_remove <- intersect(tips_to_remove, tree$tip.label)
+    if (length(tips_to_remove) == 0) return(tree)
+    if (length(tips_to_remove) >= length(tree$tip.label)) {
+      stop("Attempted to drop all tips from a tree. Check filtering logic.")
+    }
+    # Fix for ape::drop.tip bug with empty node labels
+    if (length(tree$node.label) == 0) tree$node.label <- NULL
+    
+    ape::drop.tip(tree, tips_to_remove)
+  }
+  
+  safe_keep_tip <- function(tree, tips_to_keep) {
+    tips_to_keep <- intersect(tips_to_keep, tree$tip.label)
+    if (length(tips_to_keep) < 2) {
+      stop("Fewer than 2 tips retained. Check filtering logic.")
+    }
+    safe_drop_tip(tree, setdiff(tree$tip.label, tips_to_keep))
+  }
+  
+  species_stage_table <- function(tr, tree_name, stage_name) {
+    tibble::tibble(
+      tree = tree_name,
+      stage = stage_name,
+      species = sort(tr$tip.label)
+    )
+  }
+  
+  genus_stage_table <- function(tr, tree_name, stage_name) {
+    tibble::tibble(
+      tree = tree_name,
+      stage = stage_name,
+      genus = sort(unique(extract_genus(tr$tip.label)))
+    )
+  }
+  
+  species_removed_table <- function(before_tree, after_tree, tree_name, stage_name) {
+    tibble::tibble(
+      tree = tree_name,
+      stage = stage_name,
+      species_removed = sort(setdiff(before_tree$tip.label, after_tree$tip.label))
+    ) |>
+      dplyr::filter(!is.na(species_removed))
+  }
+  
+  genus_removed_table <- function(before_tree, after_tree, tree_name, stage_name) {
+    tibble::tibble(
+      tree = tree_name,
+      stage = stage_name,
+      genus_removed = sort(setdiff(unique(extract_genus(before_tree$tip.label)),
+                                   unique(extract_genus(after_tree$tip.label))))
+    ) |>
+      dplyr::filter(!is.na(genus_removed))
+  }
+  
+  matrix_to_long <- function(mat, analysis_id, metric_name) {
+    df <- as.data.frame(as.table(mat), stringsAsFactors = FALSE)
+    colnames(df) <- c("tree_1", "tree_2", "distance")
+    df |>
+      dplyr::filter(tree_1 != tree_2) |>
+      dplyr::rowwise() |>
+      dplyr::mutate(pair_id = paste(sort(c(tree_1, tree_2)), collapse = "___")) |>
+      dplyr::ungroup() |>
+      dplyr::distinct(pair_id, .keep_all = TRUE) |>
+      dplyr::select(-pair_id) |>
+      dplyr::mutate(
+        analysis_id = analysis_id,
+        metric = metric_name
+      ) |>
+      dplyr::select(analysis_id, metric, tree_1, tree_2, distance)
+  }
+  
+  common_count_to_long <- function(mat, analysis_id) {
+    df <- as.data.frame(as.table(mat), stringsAsFactors = FALSE)
+    colnames(df) <- c("tree_1", "tree_2", "n_common_tips")
+    df |>
+      dplyr::filter(tree_1 != tree_2) |>
+      dplyr::rowwise() |>
+      dplyr::mutate(pair_id = paste(sort(c(tree_1, tree_2)), collapse = "___")) |>
+      dplyr::ungroup() |>
+      dplyr::distinct(pair_id, .keep_all = TRUE) |>
+      dplyr::select(-pair_id) |>
+      dplyr::mutate(analysis_id = analysis_id) |>
+      dplyr::select(analysis_id, tree_1, tree_2, n_common_tips)
+  }
+  
+  compute_pairwise_metric <- function(tree_list, FUN) {
+    n <- length(tree_list)
+    out_dist <- matrix(NA_real_, n, n)
+    out_n    <- matrix(NA_integer_, n, n)
+    
+    rownames(out_dist) <- colnames(out_dist) <- names(tree_list)
+    rownames(out_n)    <- colnames(out_n)    <- names(tree_list)
+    
+    diag(out_dist) <- 0
+    diag(out_n) <- sapply(tree_list, function(x) length(x$tip.label))
+    
+    for (i in 1:(n - 1)) {
+      for (j in (i + 1):n) {
+        t1 <- tree_list[[i]]
+        t2 <- tree_list[[j]]
+        common <- intersect(t1$tip.label, t2$tip.label)
+        out_n[i, j] <- out_n[j, i] <- length(common)
+        
+        if (length(common) < 3) {
+          out_dist[i, j] <- out_dist[j, i] <- NA_real_
+        } else {
+          t1p <- safe_keep_tip(t1, common)
+          t2p <- safe_keep_tip(t2, common)
+          out_dist[i, j] <- out_dist[j, i] <- FUN(t1p, t2p, normalize = TRUE)
+        }
+      }
+    }
+    
+    list(distance = out_dist, common_n = out_n)
+  }
+  
+  run_tree_space <- function(dist_mat, analysis_id) {
+    if (is.null(rownames(dist_mat)) || is.null(colnames(dist_mat))) {
+      stop(paste("Distance matrix lacks row/column names for:", analysis_id))
+    }
+    
+    off_diag <- dist_mat[row(dist_mat) != col(dist_mat)]
+    
+    if (length(off_diag) == 0 || all(is.na(off_diag))) {
+      return(tibble::tibble(
+        analysis_id = character(),
+        tree = character(),
+        Dimension_1 = numeric(),
+        Dimension_2 = numeric()
+      ))
+    }
+    
+    if (any(is.na(off_diag))) {
+      stop(paste("NA distances detected in tree-space input for:", analysis_id))
+    }
+    
+    coords <- cmdscale(as.dist(dist_mat), k = min(2, nrow(dist_mat) - 1))
+    coords <- as.matrix(coords)
+    
+    if (ncol(coords) == 1) {
+      coords <- cbind(coords[, 1], 0)
+    }
+    
+    tibble::tibble(
+      analysis_id = rep(as.character(analysis_id), nrow(coords)),
+      tree = rownames(coords),
+      Dimension_1 = as.numeric(coords[, 1]),
+      Dimension_2 = as.numeric(coords[, 2])
+    )
+  }
+  
+  choose_representative_tip <- function(tree, shared_genera) {
+    keep <- tree$tip.label[extract_genus(tree$tip.label) %in% shared_genera]
+    tr <- safe_keep_tip(tree, keep)
+    
+    genus_groups <- split(tr$tip.label, extract_genus(tr$tip.label))
+    reps <- vapply(genus_groups, function(x) sort(x)[1], character(1))
+    
+    safe_keep_tip(tr, reps)
+  }
+  
+  rename_tips_to_genus <- function(tree) {
+    new_labels <- extract_genus(tree$tip.label)
+    if (anyDuplicated(new_labels) > 0) {
+      stop("Duplicated genus names after tip renaming. Check representative selection.")
+    }
+    tree$tip.label <- new_labels
+    tree
+  }
+  
+  plot_tree_space_panel <- function(coords_tbl, analysis_id_target, title_label = NULL,
+                                    show_legend = FALSE) {
+    df <- coords_tbl |> dplyr::filter(analysis_id == analysis_id_target)
+    
+    if (nrow(df) == 0) {
+      stop(paste("No tree-space coordinates found for:", analysis_id_target))
+    }
+    
+    if (is.null(title_label)) title_label <- analysis_id_target
+    
+    ggplot2::ggplot(df, ggplot2::aes(x = Dimension_1, y = Dimension_2, color = tree, label = tree)) +
+      ggplot2::geom_point(size = 3.8) +
+      ggrepel::geom_text_repel(
+        size = 3.8,
+        max.overlaps = 20,
+        show.legend = FALSE,
+        box.padding = 0.4,
+        point.padding = 0.3,
+        segment.size = 0.3
+      ) +
+      ggplot2::scale_color_manual(
+        values = tree_palette,
+        breaks = names(tree_palette),
+        limits = names(tree_palette),
+        drop = FALSE,
+        guide = ggplot2::guide_legend(
+          nrow = 1,
+          byrow = TRUE,
+          title.position = "top"
+        )
+      ) +
+      ggplot2::labs(
+        title = title_label,
+        x = "Dimension 1",
+        y = "Dimension 2",
+        color = "Phylogeny"
+      ) +
+      base_theme +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = 11.5, face = "bold", hjust = 0),
+        axis.text = ggplot2::element_text(color = "black"),
+        legend.position = if (show_legend) "bottom" else "none",
+        legend.title = ggplot2::element_text(size = 10.5),
+        legend.text = ggplot2::element_text(size = 9.5)
+      )
+  }
+  
+  message("Loading trees...")
+  trees <- lapply(trees_mapping_list, function(path) {
+    lines <- readLines(path, n = 5, warn = FALSE)
+    is_nexus <- any(grepl("(?i)^#NEXUS", trimws(lines)))
+    if (is_nexus) {
+      ape::read.nexus(path)
+    } else {
+      ape::read.tree(path)
+    }
+  })
+  names(trees) <- names(trees_mapping_list)
+  
+  trees <- lapply(trees, function(tr) {
+    tr$tip.label <- standardize_taxon(tr$tip.label)
+    tr
+  })
+  
+  message("Loading checklist and constraints...")
+  full_checklist <- read.csv(checklist_csv, stringsAsFactors = FALSE)
+  checklist_names <- full_checklist$pureName |>
+    standardize_taxon() |>
+    unique() |>
+    sort()
+  
+  constraints <- readr::read_csv(constraints_map, show_col_types = FALSE)
+  cactaceae_tips <- constraints |>
+    dplyr::filter(Family == "Cactaceae") |>
+    dplyr::pull(Specie_name) |>
+    standardize_taxon() |>
+    unique() |>
+    sort()
+  
+  species_by_stage <- dplyr::bind_rows(lapply(names(trees), function(nm) {
+    species_stage_table(trees[[nm]], nm, "initial")
+  }))
+  
+  genera_by_stage <- dplyr::bind_rows(lapply(names(trees), function(nm) {
+    genus_stage_table(trees[[nm]], nm, "initial")
+  }))
+  
+  trees_checklist <- list()
+  checklist_summary <- list()
+  species_removed_checklist <- list()
+  genera_removed_checklist  <- list()
+  
+  message("Pruning checklist non-matches...")
+  for (nm in names(trees)) {
+    tr_before <- trees[[nm]]
+    to_remove <- setdiff(tr_before$tip.label, checklist_names)
+    tr_after  <- safe_drop_tip(tr_before, to_remove)
+    
+    trees_checklist[[nm]] <- tr_after
+    
+    checklist_summary[[nm]] <- tibble::tibble(
+      tree = nm,
+      species_before = length(tr_before$tip.label),
+      species_after = length(tr_after$tip.label),
+      species_removed = length(to_remove),
+      genera_before = length(unique(extract_genus(tr_before$tip.label))),
+      genera_after = length(unique(extract_genus(tr_after$tip.label))),
+      genera_removed = length(setdiff(unique(extract_genus(tr_before$tip.label)),
+                                      unique(extract_genus(tr_after$tip.label))))
+    )
+    
+    species_removed_checklist[[nm]] <- species_removed_table(tr_before, tr_after, nm, "removed_by_checklist")
+    genera_removed_checklist[[nm]]  <- genus_removed_table(tr_before, tr_after, nm, "removed_by_checklist")
+  }
+  
+  SUPP_checklist_pruning_summary <- dplyr::bind_rows(checklist_summary)
+  
+  species_by_stage <- dplyr::bind_rows(
+    species_by_stage,
+    dplyr::bind_rows(lapply(names(trees_checklist), function(nm) {
+      species_stage_table(trees_checklist[[nm]], nm, "after_checklist")
+    }))
+  )
+  
+  genera_by_stage <- dplyr::bind_rows(
+    genera_by_stage,
+    dplyr::bind_rows(lapply(names(trees_checklist), function(nm) {
+      genus_stage_table(trees_checklist[[nm]], nm, "after_checklist")
+    }))
+  )
+  
+  SUPP_species_removed_by_checklist <- dplyr::bind_rows(species_removed_checklist)
+  SUPP_genera_removed_by_checklist  <- dplyr::bind_rows(genera_removed_checklist)
+  
+  outgroup_genus <- c(
+    FocalTree= "Leuenbergeria",
+    Thompson = "Leuenbergeria",
+    Amaral   = "Leuenbergeria",
+    deVos    = "Leuenbergeria"
+  )
+  
+  trees_root <- list()
+  rooting_summary <- list()
+  species_removed_family <- list()
+  genera_removed_family  <- list()
+  
+  message("Filtering Cactaceae family and rooting...")
+  for (nm in names(trees_checklist)) {
+    tr_before <- trees_checklist[[nm]]
+    
+    missing_in_constraint <- setdiff(tr_before$tip.label, cactaceae_tips)
+    tr_family <- safe_drop_tip(tr_before, missing_in_constraint)
+    
+    genus_out <- outgroup_genus[[nm]]
+    if (is.null(genus_out)) genus_out <- "Leuenbergeria"
+    genus_tips <- tr_family$tip.label[grepl(paste0("^", genus_out, "_"), tr_family$tip.label)]
+    
+    rooted_successfully <- FALSE
+    root_notes <- NA_character_
+    tr_after <- tr_family
+    
+    if (length(genus_tips) == 0) {
+      root_notes <- paste0("No outgroup tips found for genus ", genus_out, "; tree left as-is")
+    } else {
+      tr_after <- tryCatch(
+        ape::root(tr_family, outgroup = genus_tips, resolve.root = TRUE),
+        error = function(e) {
+          root_notes <<- paste("Rooting failed:", e$message)
+          tr_family
+        }
+      )
+      rooted_successfully <- !identical(tr_after, tr_family) || ape::is.rooted(tr_after)
+      if (is.na(root_notes)) root_notes <- "Rooted with all available outgroup tips"
+    }
+    
+    trees_root[[nm]] <- tr_after
+    
+    rooting_summary[[nm]] <- tibble::tibble(
+      tree = nm,
+      outgroup_genus = genus_out,
+      n_outgroup_tips = length(genus_tips),
+      species_before_family = length(tr_before$tip.label),
+      species_after_family = length(tr_family$tip.label),
+      species_removed_family = length(missing_in_constraint),
+      genera_before_family = length(unique(extract_genus(tr_before$tip.label))),
+      genera_after_family = length(unique(extract_genus(tr_family$tip.label))),
+      genera_removed_family = length(setdiff(unique(extract_genus(tr_before$tip.label)),
+                                             unique(extract_genus(tr_family$tip.label)))),
+      rooted_successfully = rooted_successfully,
+      rooting_notes = root_notes
+    )
+    
+    species_removed_family[[nm]] <- species_removed_table(tr_before, tr_family, nm, "removed_by_family_filter")
+    genera_removed_family[[nm]]  <- genus_removed_table(tr_before, tr_family, nm, "removed_by_family_filter")
+  }
+  
+  SUPP_rooting_summary <- dplyr::bind_rows(rooting_summary)
+  
+  species_by_stage <- dplyr::bind_rows(
+    species_by_stage,
+    dplyr::bind_rows(lapply(names(trees_root), function(nm) {
+      species_stage_table(trees_root[[nm]], nm, "after_family_filter")
+    }))
+  )
+  
+  genera_by_stage <- dplyr::bind_rows(
+    genera_by_stage,
+    dplyr::bind_rows(lapply(names(trees_root), function(nm) {
+      genus_stage_table(trees_root[[nm]], nm, "after_family_filter")
+    }))
+  )
+  
+  SUPP_species_removed_by_family_filter <- dplyr::bind_rows(species_removed_family)
+  SUPP_genera_removed_by_family_filter  <- dplyr::bind_rows(genera_removed_family)
+  
+  SUPP_taxonomic_crosswalk_clean <- dplyr::bind_rows(lapply(names(trees_root), function(nm) {
+    tibble::tibble(
+      tree = nm,
+      taxon = sort(trees_root[[nm]]$tip.label),
+      genus = extract_genus(sort(trees_root[[nm]]$tip.label))
+    )
+  }))
+  
+  SUPP_missing_species_constraints <- dplyr::bind_rows(lapply(names(trees_checklist), function(nm) {
+    tibble::tibble(
+      tree = nm,
+      species_not_in_constraints = sort(setdiff(trees_checklist[[nm]]$tip.label, cactaceae_tips))
+    ) |>
+      dplyr::filter(!is.na(species_not_in_constraints))
+  }))
+  
+  TABLE_phylogeny_summary_main <- dplyr::bind_rows(lapply(names(trees_root), function(nm) {
+    tr_initial   <- trees[[nm]]
+    tr_checklist <- trees_checklist[[nm]]
+    tr_final     <- trees_root[[nm]]
+    
+    tibble::tibble(
+      tree = nm,
+      species_initial = length(tr_initial$tip.label),
+      species_after_checklist = length(tr_checklist$tip.label),
+      species_final = length(tr_final$tip.label),
+      genera_initial = length(unique(extract_genus(tr_initial$tip.label))),
+      genera_after_checklist = length(unique(extract_genus(tr_checklist$tip.label))),
+      genera_final = length(unique(extract_genus(tr_final$tip.label))),
+      nodes_final = tr_final$Nnode,
+      species_retained_pct = round(100 * length(tr_final$tip.label) / length(tr_initial$tip.label), 2),
+      genera_retained_pct = round(
+        100 * length(unique(extract_genus(tr_final$tip.label))) /
+          length(unique(extract_genus(tr_initial$tip.label))), 2
+      )
+    )
+  }))
+  
+  SUPP_taxon_counts_by_stage <- dplyr::bind_rows(lapply(names(trees_root), function(nm) {
+    tr_initial   <- trees[[nm]]
+    tr_checklist <- trees_checklist[[nm]]
+    tr_final     <- trees_root[[nm]]
+    
+    tibble::tibble(
+      tree = nm,
+      stage = c("initial", "after_checklist", "after_family_filter"),
+      n_species = c(length(tr_initial$tip.label),
+                    length(tr_checklist$tip.label),
+                    length(tr_final$tip.label)),
+      n_genera = c(length(unique(extract_genus(tr_initial$tip.label))),
+                   length(unique(extract_genus(tr_checklist$tip.label))),
+                   length(unique(extract_genus(tr_final$tip.label))))
+    )
+  }))
+  
+  message("Defining shared sets...")
+  common_species_all4 <- Reduce(intersect, lapply(trees_root, function(x) x$tip.label))
+  
+  species_tree_names_3 <- intersect(names(trees_root), c("FocalTree", "Thompson", "Amaral"))
+  if (length(species_tree_names_3) < 3) species_tree_names_3 <- names(trees_root)
+  common_species_3 <- Reduce(intersect, lapply(trees_root[species_tree_names_3], function(x) x$tip.label))
+  
+  shared_genera_all4 <- Reduce(intersect, lapply(trees_root, function(x) unique(extract_genus(x$tip.label))))
+  
+  trees_shared_genera_species <- lapply(trees_root, function(tr) {
+    keep <- tr$tip.label[extract_genus(tr$tip.label) %in% shared_genera_all4]
+    safe_keep_tip(tr, keep)
+  })
+  
+  trees_shared_genera_rep <- lapply(trees_root, function(tr) {
+    rep_tree <- choose_representative_tip(tr, shared_genera_all4)
+    rename_tips_to_genus(rep_tree)
+  })
+  
+  SUPP_species_shared_set_all4 <- tibble::tibble(
+    species = sort(common_species_all4),
+    genus = extract_genus(sort(common_species_all4))
+  )
+  
+  SUPP_species_shared_set_3 <- tibble::tibble(
+    species = sort(common_species_3),
+    genus = extract_genus(sort(common_species_3))
+  )
+  
+  SUPP_shared_genera_all4 <- tibble::tibble(
+    genus = sort(shared_genera_all4)
+  )
+  
+  SUPP_all_species_in_shared_genera <- dplyr::bind_rows(lapply(names(trees_shared_genera_species), function(nm) {
+    tibble::tibble(
+      tree = nm,
+      species = sort(trees_shared_genera_species[[nm]]$tip.label),
+      genus = extract_genus(sort(trees_shared_genera_species[[nm]]$tip.label))
+    )
+  }))
+  
+  SUPP_genus_representatives <- dplyr::bind_rows(lapply(names(trees_shared_genera_rep), function(nm) {
+    tibble::tibble(
+      tree = nm,
+      representative_species_original = sort(choose_representative_tip(trees_root[[nm]], shared_genera_all4)$tip.label),
+      genus = sort(trees_shared_genera_rep[[nm]]$tip.label),
+      criterion = "alphabetically_first_within_shared_genus_after_family_filter"
+    )
+  }))
+  
+  analysis_trees <- list(
+    A1_species_all4 = lapply(trees_root, function(tr) safe_keep_tip(tr, common_species_all4)),
+    A2_species_3 = lapply(trees_root[species_tree_names_3], function(tr) safe_keep_tip(tr, common_species_3)),
+    A3_all_species_in_shared_genera = trees_shared_genera_species,
+    A4_representative_shared_genera = trees_shared_genera_rep
+  )
+  
+  analysis_labels <- c(
+    A1_species_all4 = "A1. Shared species across all four trees",
+    A2_species_3 = "A2. Shared species across Focal Tree, Thompson, and Amaral",
+    A3_all_species_in_shared_genera = "A3. All species within genera shared across all four trees",
+    A4_representative_shared_genera = "A4. One representative per shared genus across all four trees"
+  )
+  
+  analysis_units <- c(
+    A1_species_all4 = "species",
+    A2_species_3 = "species",
+    A3_all_species_in_shared_genera = "species_within_shared_genera",
+    A4_representative_shared_genera = "shared_genera_operational_terminals"
+  )
+  
+  analysis_shared_n <- c(
+    A1_species_all4 = length(common_species_all4),
+    A2_species_3 = length(common_species_3),
+    A3_all_species_in_shared_genera = length(shared_genera_all4),
+    A4_representative_shared_genera = length(shared_genera_all4)
+  )
+  
+  TABLE_comparison_dataset_summary_main <- dplyr::bind_rows(lapply(names(analysis_trees), function(aid) {
+    dplyr::bind_rows(lapply(names(analysis_trees[[aid]]), function(nm) {
+      tr <- analysis_trees[[aid]][[nm]]
+      tibble::tibble(
+        analysis_id = aid,
+        analysis_label = analysis_labels[[aid]],
+        unit = analysis_units[[aid]],
+        shared_set_size = analysis_shared_n[[aid]],
+        tree = nm,
+        n_tips_retained = length(tr$tip.label),
+        n_genera_retained = length(unique(extract_genus(tr$tip.label))),
+        n_nodes = tr$Nnode
+      )
+    }))
+  }))
+  
+  message("Calculating pairwise metrics...")
+  distance_results <- list()
+  tree_space_coords_rf <- list()
+  tree_space_coords_dpi <- list()
+  pairwise_tables <- list()
+  common_tables <- list()
+  
+  for (aid in names(analysis_trees)) {
+    tree_set <- analysis_trees[[aid]]
+    
+    rf_res  <- compute_pairwise_metric(tree_set, phangorn::RF.dist)
+    dpi_res <- compute_pairwise_metric(tree_set, TreeDist::DifferentPhylogeneticInfo)
+    
+    dist_tbl <- dplyr::bind_rows(
+      matrix_to_long(rf_res$distance, aid, "RF"),
+      matrix_to_long(dpi_res$distance, aid, "DPI")
+    )
+    
+    common_tbl <- common_count_to_long(rf_res$common_n, aid)
+    
+    pairwise_tables[[aid]] <- dist_tbl
+    common_tables[[aid]] <- common_tbl
+    tree_space_coords_rf[[aid]] <- run_tree_space(rf_res$distance, aid)
+    tree_space_coords_dpi[[aid]] <- run_tree_space(dpi_res$distance, aid)
+    
+    distance_results[[aid]] <- list(
+      rf = rf_res,
+      dpi = dpi_res
+    )
+  }
+  
+  TABLE_pairwise_tree_distances_main <- dplyr::bind_rows(pairwise_tables) |>
+    dplyr::left_join(dplyr::bind_rows(common_tables), by = c("analysis_id", "tree_1", "tree_2")) |>
+    dplyr::mutate(analysis_label = unname(analysis_labels[analysis_id])) |>
+    dplyr::select(analysis_id, analysis_label, metric, tree_1, tree_2, n_common_tips, distance)
+  
+  SUPP_tree_space_coordinates_rf <- dplyr::bind_rows(tree_space_coords_rf) |>
+    dplyr::mutate(metric = "RF", analysis_label = unname(analysis_labels[analysis_id]))
+  
+  SUPP_tree_space_coordinates_dpi <- dplyr::bind_rows(tree_space_coords_dpi) |>
+    dplyr::mutate(metric = "DPI", analysis_label = unname(analysis_labels[analysis_id]))
+  
+  SUPP_tree_space_coordinates <- dplyr::bind_rows(
+    SUPP_tree_space_coordinates_rf,
+    SUPP_tree_space_coordinates_dpi
+  )
+  
+  message("Generating MDS plots...")
+  expected_analyses <- c(
+    "A1_species_all4",
+    "A2_species_3",
+    "A3_all_species_in_shared_genera",
+    "A4_representative_shared_genera"
+  )
+  
+  available_analyses <- unique(SUPP_tree_space_coordinates_rf$analysis_id)
+  if (length(available_analyses) > 0) {
+    p_legend <- plot_tree_space_panel(
+      SUPP_tree_space_coordinates_rf,
+      available_analyses[1],
+      "Legend",
+      show_legend = TRUE
+    )
+    
+    plot_list <- list()
+    for (aid in available_analyses) {
+      label <- unname(analysis_labels[aid])
+      if (is.na(label)) label <- aid
+      plot_list[[aid]] <- plot_tree_space_panel(
+        SUPP_tree_space_coordinates_rf,
+        aid,
+        label,
+        show_legend = FALSE
+      )
+    }
+    
+    legend_grob <- cowplot::get_legend(p_legend)
+    panels <- cowplot::plot_grid(plotlist = plot_list, ncol = 2)
+    
+    FIG_tree_space_main <- cowplot::plot_grid(
+      panels,
+      legend_grob,
+      ncol = 1,
+      rel_heights = c(1, 0.10)
+    )
+    
+    ggplot2::ggsave(
+      file.path(OUT_FIGURES, "FIG_tree_space_main.pdf"),
+      FIG_tree_space_main,
+      width = 11.69,
+      height = 8.27,
+      units = "in"
+    )
+  } else {
+    warning("No tree-space coordinates available to plot.")
+  }
+  
+  message("Exporting results to ", out_dir)
+  purrr::walk(names(trees_root), function(nm) {
+    ape::write.tree(
+      trees_root[[nm]],
+      file = file.path(OUT_TREES, paste0("TREE_", nm, "_after_family_filter.tre"))
+    )
+  })
+  
+  for (aid in names(analysis_trees)) {
+    purrr::walk(names(analysis_trees[[aid]]), function(nm) {
+      ape::write.tree(
+        analysis_trees[[aid]][[nm]],
+        file = file.path(OUT_TREES, paste0("TREE_", nm, "_", aid, ".tre"))
+      )
+    })
+  }
+  
+  readr::write_csv(TABLE_phylogeny_summary_main, file.path(OUT_TABLES, "TABLE_phylogeny_summary_main.csv"))
+  readr::write_csv(TABLE_comparison_dataset_summary_main, file.path(OUT_TABLES, "TABLE_comparison_dataset_summary_main.csv"))
+  readr::write_csv(TABLE_pairwise_tree_distances_main, file.path(OUT_TABLES, "TABLE_pairwise_tree_distances_main.csv"))
+  readr::write_csv(SUPP_checklist_pruning_summary, file.path(OUT_TABLES, "SUPP_checklist_pruning_summary.csv"))
+  readr::write_csv(SUPP_rooting_summary, file.path(OUT_TABLES, "SUPP_rooting_summary.csv"))
+  readr::write_csv(SUPP_taxon_counts_by_stage, file.path(OUT_TABLES, "SUPP_taxon_counts_by_stage.csv"))
+  readr::write_csv(species_by_stage, file.path(OUT_TABLES, "SUPP_species_lists_by_stage.csv"))
+  readr::write_csv(genera_by_stage, file.path(OUT_TABLES, "SUPP_genera_lists_by_stage.csv"))
+  readr::write_csv(SUPP_species_removed_by_checklist, file.path(OUT_TABLES, "SUPP_species_removed_by_checklist.csv"))
+  readr::write_csv(SUPP_genera_removed_by_checklist, file.path(OUT_TABLES, "SUPP_genera_removed_by_checklist.csv"))
+  readr::write_csv(SUPP_species_removed_by_family_filter, file.path(OUT_TABLES, "SUPP_species_removed_by_family_filter.csv"))
+  readr::write_csv(SUPP_genera_removed_by_family_filter, file.path(OUT_TABLES, "SUPP_genera_removed_by_family_filter.csv"))
+  readr::write_csv(SUPP_taxonomic_crosswalk_clean, file.path(OUT_TABLES, "SUPP_taxonomic_crosswalk_clean.csv"))
+  readr::write_csv(SUPP_missing_species_constraints, file.path(OUT_TABLES, "SUPP_missing_species_constraints.csv"))
+  readr::write_csv(SUPP_species_shared_set_all4, file.path(OUT_TABLES, "SUPP_species_shared_set_all4.csv"))
+  readr::write_csv(SUPP_species_shared_set_3, file.path(OUT_TABLES, "SUPP_species_shared_set_3.csv"))
+  readr::write_csv(SUPP_shared_genera_all4, file.path(OUT_TABLES, "SUPP_shared_genera_all4.csv"))
+  readr::write_csv(SUPP_all_species_in_shared_genera, file.path(OUT_TABLES, "SUPP_all_species_in_shared_genera.csv"))
+  readr::write_csv(SUPP_genus_representatives, file.path(OUT_TABLES, "SUPP_genus_representatives.csv"))
+  readr::write_csv(SUPP_tree_space_coordinates, file.path(OUT_TABLES, "SUPP_tree_space_coordinates.csv"))
+  
+  if (!is.null(distance_results$A1_species_all4)) {
+    readr::write_csv(as.data.frame(distance_results$A1_species_all4$rf$distance), file.path(OUT_TABLES, "SUPP_RF_A1_species_all4.csv"))
+    readr::write_csv(as.data.frame(distance_results$A1_species_all4$dpi$distance), file.path(OUT_TABLES, "SUPP_DPI_A1_species_all4.csv"))
+  }
+  
+  if (!is.null(distance_results$A2_species_3)) {
+    readr::write_csv(as.data.frame(distance_results$A2_species_3$rf$distance), file.path(OUT_TABLES, "SUPP_RF_A2_species_3.csv"))
+    readr::write_csv(as.data.frame(distance_results$A2_species_3$dpi$distance), file.path(OUT_TABLES, "SUPP_DPI_A2_species_3.csv"))
+  }
+  
+  if (!is.null(distance_results$A3_all_species_in_shared_genera)) {
+    readr::write_csv(as.data.frame(distance_results$A3_all_species_in_shared_genera$rf$distance), file.path(OUT_TABLES, "SUPP_RF_A3_all_species_in_shared_genera.csv"))
+    readr::write_csv(as.data.frame(distance_results$A3_all_species_in_shared_genera$dpi$distance), file.path(OUT_TABLES, "SUPP_DPI_A3_all_species_in_shared_genera.csv"))
+  }
+  
+  if (!is.null(distance_results$A4_representative_shared_genera)) {
+    readr::write_csv(as.data.frame(distance_results$A4_representative_shared_genera$rf$distance), file.path(OUT_TABLES, "SUPP_RF_A4_representative_shared_genera.csv"))
+    readr::write_csv(as.data.frame(distance_results$A4_representative_shared_genera$dpi$distance), file.path(OUT_TABLES, "SUPP_DPI_A4_representative_shared_genera.csv"))
+  }
+  
+  message("Phylogenetic validation pipeline completed successfully. \U0001f335")
+  return(list(
+    tables = OUT_TABLES,
+    figures = OUT_FIGURES,
+    trees = OUT_TREES,
+    plot = if (exists("FIG_tree_space_main")) FIG_tree_space_main else NULL
+  ))
+}
