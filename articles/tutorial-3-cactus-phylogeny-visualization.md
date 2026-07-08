@@ -751,7 +751,7 @@ if (file.exists(supp_tree_file) && nzchar(supp_tree_file)) {
 > download the tree poster here:
 >
 > [⬇️ Download Annotated Maximum-Likelihood Phylogeny with TBE Support
-> (PDF)](https://github.com/beeamerino/CactusPhylo/blob/e2f42c5fdd60721a8ad17fa8c8fc3509af7becde/inst/extdata/Extended_ML_Phylogeny.pdf)
+> (PDF)](https://github.com/beeamerino/CactusPhylo/blob/ab196ef24a515330b9be9356e72741c0ef05585a/inst/extdata/Extended_ML_Phylogeny.pdf)
 
 If you wish to export the annotated `treedata` object into `.tree`
 (Nexus/BEAST format) to analyze in exterior software such as FigTree
@@ -767,7 +767,7 @@ treeio::write.beast(annotated_treedata, file = "9_Visualization/figures/annotate
 > natively from our repository:
 >
 > [⬇️ Download Annotated Maximum-Likelihood Phylogeny with TBE Support
-> (.tree)](https://raw.githubusercontent.com/beeamerino/CactusPhylo/a1c7a88f5ddaa7bcf85ce09df67f97e9cffdc4a3/inst/extdata/cactus_support.raxml.support)
+> (.tree)](https://raw.githubusercontent.com/beeamerino/CactusPhylo/refs/heads/master/inst/extdata/cactus_support.raxml.support)
 
 #### Figure 15: Time-Calibrated Chronogram
 
@@ -873,7 +873,7 @@ if (file.exists(chrono_file) && nzchar(chrono_file)) {
 > view and download the chronogram poster here:
 >
 > [⬇️ Download Annotated Time-Calibrated Chronogram
-> (PDF)](https://github.com/beeamerino/CactusPhylo/blob/e2f42c5fdd60721a8ad17fa8c8fc3509af7becde/inst/extdata/Extended_Chronogram.pdf)
+> (PDF)](https://github.com/beeamerino/CactusPhylo/blob/ab196ef24a515330b9be9356e72741c0ef05585a/inst/extdata/Extended_Chronogram.pdf)
 
 If you wish to export the annotated chronogram `treedata` object into
 `.tree` (Nexus/BEAST format) to analyze in exterior software such as
