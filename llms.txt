@@ -1,0 +1,304 @@
+# CactusPhylo
+
+### Reproducible phylogenetic workflows for data assembly, inference, and divergence time estimation
+
+`CactusPhylo` is an R package for assembling, curating, and analysing
+multilocus phylogenetic datasets from publicly available DNA sequences.
+
+The package was originally developed for evolutionary studies of
+**Cactaceae**, but its modular workflow can be applied to any taxonomic
+group requiring reproducible phylogenetic data preparation,
+maximum-likelihood inference, divergence time estimation, and downstream
+comparative analyses.
+
+`CactusPhylo` integrates widely used phylogenetic software into a single
+reproducible workflow implemented in R.
+
+------------------------------------------------------------------------
+
+# Main Features
+
+The package provides tools for:
+
+- Automating the retrieval of homologous DNA sequence clusters from
+  GenBank using `phylotaR` and `BLAST+`.
+- Enforcing positional homology via robust multiple sequence alignments
+  with `MAFFT`.
+- Mitigating systematic errors through automated masking of
+  non-homologous segments implemented with `DECIPHER`.
+- Standardizing nomenclatural frameworks to assemble curated, unified
+  multilocus datasets.
+- Synthesizing concatenated supermatrices and defining structural
+  partition bounds for phylogenetic inference.
+- Statistically controlling for mutational heterogeneity by selecting
+  optimal substitution models via `ModelTest-NG`.
+- Inferring maximum-likelihood evolutionary hypotheses using `RAxML-NG`.
+- Estimating ultrametric chronograms to accommodate evolutionary rate
+  heterogeneity with `treePL`.
+- Integrating complex taxonomic and conservation metadata, including
+  statuses from the **IUCN Red List**.
+- Producing publication-quality phylogenetic figures and chronological
+  cadastres.
+- Quantifying topological congruence and validating alternative
+  phylogenetic hypotheses.
+
+------------------------------------------------------------------------
+
+# Workflow
+
+The complete workflow is organized into four analytical stages
+comprising thirteen interoperable modules.
+
+![CactusPhylo Workflow
+Architecture](reference/figures/Fig1_CactusPhylo_Workflow.png)
+
+CactusPhylo Workflow Architecture
+
+Each stage can be executed independently or combined into a fully
+reproducible phylogenetic workflow.
+
+------------------------------------------------------------------------
+
+# Installation
+
+Install the development version directly from GitHub.
+
+``` r
+
+if (!requireNamespace("remotes", quietly = TRUE))
+  install.packages("remotes")
+
+remotes::install_github("beeamerino/CactusPhylo")
+```
+
+------------------------------------------------------------------------
+
+# R Dependencies
+
+`CactusPhylo` relies on packages available from both CRAN and
+Bioconductor.
+
+| Repository | Main packages |
+|:---|:---|
+| **remotes** | `phylotaR` |
+| **Bioconductor** | `DECIPHER`, `Biostrings` |
+| **CRAN** | ape, ggplot2, dplyr, tidyr, readr, stringr, purrr, rredlist, forcats, scales, RColorBrewer |
+
+# External Software
+
+Several analyses performed by `CactusPhylo` rely on external
+command-line software that must be installed separately and available
+from your system `PATH`.
+
+| Software | Purpose | Citation |
+|:---|:---|:---|
+| [**`BLAST+`**](https://www.ncbi.nlm.nih.gov/books/NBK279690/) | Local sequence alignment and database searching | Camacho, C. *et al*. (2009). BLAST+: Architecture and applications. *BMC Bioinformatics*, *10*. <https://doi.org/10.1186/1471-2105-10-421> |
+| [**`MAFFT`**](https://mafft.cbrc.jp/alignment/software/) | Multiple sequence alignment | Katoh, K., & Standley, D. M. (2013). MAFFT multiple sequence alignment software version 7: Improvements in performance and usability. Molecular Biology and Evolution, 30(4), 772–780. <https://doi.org/10.1093/molbev/mst010> |
+| [**`ModelTest-NG`**](https://github.com/ddarriba/modeltest) | Model selection | Darriba, D. *et al*. (2020). ModelTest-NG: a new and scalable tool for the selection of DNA and protein evolutionary models. Molecular Biology and Evolution, 37(1), 291-294. doi.org/10.1093/molbev/msz189 |
+| [**`RAxML-NG`**](https://github.com/amkozlov/raxml-ng) | Maximum-likelihood phylogenetic inference | Kozlov, A. M. *et al*. (2019). RAxML-NG: A fast, scalable and user-friendly tool for maximum likelihood phylogenetic inference. Bioinformatics, 35(21), 4453–4455. <https://doi.org/10.1093/bioinformatics/btz305> |
+| [**`treePL`**](https://github.com/blackrim/treePL) | Divergence time estimation | Smith, S. A., & O’Meara, B. C. (2012). TreePL: Divergence time estimation using penalized likelihood for large phylogenies. Bioinformatics, 28(20), 2689–2690. <https://doi.org/10.1093/bioinformatics/bts492> |
+
+------------------------------------------------------------------------
+
+# Documentation
+
+The recommended way to learn `CactusPhylo` is by following the tutorials
+in sequence.
+
+| Tutorial | Description |
+|:---|:---|
+| [**Get Started**](https://beeamerino.github.io/CactusPhylo/articles/CactusPhylo.html) | Package overview and installation |
+| [**Tutorial 1**](https://beeamerino.github.io/CactusPhylo/articles/tutorial-1-cactus-phylogeny-prep.html) | Data Assembly and Preparation |
+| [**Tutorial 2**](https://beeamerino.github.io/CactusPhylo/articles/tutorial-2-cactus-phylogeny-inference.html) | Phylogenetic Inference and Divergence Time Estimation |
+| [**Tutorial 3**](https://beeamerino.github.io/CactusPhylo/articles/tutorial-3-cactus-phylogeny-visualization.html) | Visualization and Metadata Integration |
+| [**Tutorial 4**](https://beeamerino.github.io/CactusPhylo/articles/tutorial-4-cactus-phylogeny-validation.html) | Phylogenetic Validation and Comparative Analyses |
+| [**Function Reference**](https://beeamerino.github.io/CactusPhylo/articles/tutorial-5-cactus-phylogeny-functions.html) | Complete reference of package functions |
+
+------------------------------------------------------------------------
+
+# Citation
+
+If you use **CactusPhylo** in your research, please cite the package:
+
+``` r
+
+citation("CactusPhylo")
+```
+
+If a software paper is available, please cite both the package and the
+associated publication.
+
+------------------------------------------------------------------------
+
+# License
+
+`CactusPhylo` is released under the **GPL-3 License**.
+
+Bug reports, feature requests, and source code are available through the
+project’s GitHub repository.
+
+# Package index
+
+## Sequence Assemblies & PhylotaR Import
+
+Functions to setup databases, pull taxonomic clusters, and download
+GenBank accessions safely.
+
+- [`assemble_ingroup_phylotar()`](https://beeamerino.github.io/CactusPhylo/reference/assemble_ingroup_phylotar.md)
+  : Assemble Ingroup phylotaR Clusters
+- [`assemble_outgroup_phylotar()`](https://beeamerino.github.io/CactusPhylo/reference/assemble_outgroup_phylotar.md)
+  : Assemble Outgroup phylotaR Clusters
+- [`fetch_genbank_metadata()`](https://beeamerino.github.io/CactusPhylo/reference/fetch_genbank_metadata.md)
+  : Fetch Genbank Metadata
+
+## Taxonomic Cleaning & Reconciliations
+
+Check name spelling, audit duplicates, and verify records against
+checklists.
+
+- [`clean_taxonomic_names()`](https://beeamerino.github.io/CactusPhylo/reference/clean_taxonomic_names.md)
+  : Reconcile and Validate Taxonomic Names
+- [`integrate_and_clean_markers()`](https://beeamerino.github.io/CactusPhylo/reference/integrate_and_clean_markers.md)
+  : Final Marker Integration and Taxonomic Cleaning
+
+## Multiple Alignment, DECIPHER Cleaners, & Masking
+
+Run system MAFFT and refine aligned nucleotides using gap-masking
+procedures.
+
+- [`run_mafft()`](https://beeamerino.github.io/CactusPhylo/reference/run_mafft.md)
+  : Run MAFFT Alignment
+- [`run_alignment_pipeline()`](https://beeamerino.github.io/CactusPhylo/reference/run_alignment_pipeline.md)
+  : Run Complete Alignment Pipeline
+- [`run_joint_realignment()`](https://beeamerino.github.io/CactusPhylo/reference/run_joint_realignment.md)
+  : Run Final Joint Realignment Pipeline
+
+## Locus Quality Control & Saturation Screening
+
+Detect distance outliers and perform saturation regression checks.
+
+- [`run_marker_screening()`](https://beeamerino.github.io/CactusPhylo/reference/run_marker_screening.md)
+  : Run Ingroup Marker Screening Pipeline
+
+## Concatenation and Partitioning Maps
+
+Bind loci end-to-end to assemble a master phylogenetic matrix and export
+format partitions.
+
+- [`run_concatenation_pipeline()`](https://beeamerino.github.io/CactusPhylo/reference/run_concatenation_pipeline.md)
+  : Run Concatenation Pipeline
+
+## Phylogenetic Search & Constrained Inference
+
+Run model testers (ModelTest-NG) and ML estimations (RAxML-NG) guided by
+Newick scaffolds.
+
+- [`preprocess_partitions()`](https://beeamerino.github.io/CactusPhylo/reference/preprocess_partitions.md)
+  : Preprocess Partitions and Run Alignment Check
+- [`run_modeltest_ng()`](https://beeamerino.github.io/CactusPhylo/reference/run_modeltest_ng.md)
+  : Run ModelTest-NG Partition Evaluations
+- [`build_constraint_scaffold()`](https://beeamerino.github.io/CactusPhylo/reference/build_constraint_scaffold.md)
+  : Generate Newick Constraint Scaffold
+- [`calculate_ml_tree()`](https://beeamerino.github.io/CactusPhylo/reference/calculate_ml_tree.md)
+  : Execute ML Search in RAxML-NG
+- [`calculate_rf_distances()`](https://beeamerino.github.io/CactusPhylo/reference/calculate_rf_distances.md)
+  : Compute Robinson-Foulds Distances between Maximum-Likelihood Trees
+- [`generate_bootstrap_script()`](https://beeamerino.github.io/CactusPhylo/reference/generate_bootstrap_script.md)
+  : Generate Chunk Bootstrap Shell Script
+- [`run_local_bootstraps()`](https://beeamerino.github.io/CactusPhylo/reference/run_local_bootstraps.md)
+  : Run Bootstrap Search Locally
+- [`collect_bootstraps()`](https://beeamerino.github.io/CactusPhylo/reference/collect_bootstraps.md)
+  : Collect Bootstrap Trees
+- [`check_bs_convergence()`](https://beeamerino.github.io/CactusPhylo/reference/check_bs_convergence.md)
+  : Check Bootstrap Convergence
+- [`calculate_temporal_bootstraps()`](https://beeamerino.github.io/CactusPhylo/reference/calculate_temporal_bootstraps.md)
+  : Compute Temporal Best Maximum-Likelihood Tree Constrained Bootstrap
+  Replicates
+- [`map_branch_supports()`](https://beeamerino.github.io/CactusPhylo/reference/map_branch_supports.md)
+  : Calculate and Burn Branch Supports
+
+## Chronological Dating & treePL Automation
+
+Automated treePL cross-validation and chronological calibrations over
+bootstrap cohorts.
+
+- [`rescale_tree()`](https://beeamerino.github.io/CactusPhylo/reference/rescale_tree.md)
+  : Rescale all branches of a tree
+- [`run_treePL()`](https://beeamerino.github.io/CactusPhylo/reference/run_treePL.md)
+  : Run treePL via Wrapper
+- [`run_treePL_direct()`](https://beeamerino.github.io/CactusPhylo/reference/run_treePL_direct.md)
+  : Run treePL directly
+- [`automate_treePL()`](https://beeamerino.github.io/CactusPhylo/reference/automate_treePL.md)
+  : Automate treePL bootstrap pipeline
+
+## Multi-Scale Topologies Validation
+
+Compare comparative tree structures using Robinson-Foulds, DPI, and
+project into 2D MDS scopes.
+
+- [`validate_phylogenies()`](https://beeamerino.github.io/CactusPhylo/reference/validate_phylogenies.md)
+  : Comparative Tree space validation pipeline
+
+## Manuscript Figures & Publication Polish
+
+Integrate final results, apply editorial clade collapses, and draw
+SVG/PDF panels.
+
+- [`integrate_publication_tree()`](https://beeamerino.github.io/CactusPhylo/reference/integrate_publication_tree.md)
+  : Render Final Publication Figures and Registry
+
+## IUCN Conservation Metadata
+
+Extract threat metrics and habitats using rredlist and map color scales
+for plotting.
+
+- [`get_iucn_data()`](https://beeamerino.github.io/CactusPhylo/reference/get_iucn_data.md)
+  : Extract IUCN Data from rredlist
+- [`scale_fill_iucn()`](https://beeamerino.github.io/CactusPhylo/reference/scale_fill_iucn.md)
+  : IUCN Category Color Scale for ggplot2
+
+## Internal Tools and Visualization Helpers
+
+Internal functions for phylogenetic visualization and data preparation.
+
+- [`add_clade_labels_by_level()`](https://beeamerino.github.io/CactusPhylo/reference/add_clade_labels_by_level.md)
+  : Add clade labels by level
+- [`apply_clade_label_layers()`](https://beeamerino.github.io/CactusPhylo/reference/apply_clade_label_layers.md)
+  : Apply clade label layers
+- [`assert_constraint_columns()`](https://beeamerino.github.io/CactusPhylo/reference/assert_constraint_columns.md)
+  : Assert constraint columns
+- [`augment_treedata_with_registry()`](https://beeamerino.github.io/CactusPhylo/reference/augment_treedata_with_registry.md)
+  : Augment treedata with registry annotations
+- [`build_annotation_registry()`](https://beeamerino.github.io/CactusPhylo/reference/build_annotation_registry.md)
+  : Build annotation registry
+- [`compute_group_nodes()`](https://beeamerino.github.io/CactusPhylo/reference/compute_group_nodes.md)
+  : Compute group nodes
+- [`get_annotation_nodes()`](https://beeamerino.github.io/CactusPhylo/reference/get_annotation_nodes.md)
+  : Get annotation nodes
+- [`prepare_tip_annotation()`](https://beeamerino.github.io/CactusPhylo/reference/prepare_tip_annotation.md)
+  : Prepare tip annotation
+- [`standardize_taxon()`](https://beeamerino.github.io/CactusPhylo/reference/standardize_taxon.md)
+  : Standardization helper
+- [`get_tree_max_depth()`](https://beeamerino.github.io/CactusPhylo/reference/get_tree_max_depth.md)
+  : Get tree max depth
+- [`format_age_labels()`](https://beeamerino.github.io/CactusPhylo/reference/format_age_labels.md)
+  : Format age labels
+- [`add_chronogram_axis()`](https://beeamerino.github.io/CactusPhylo/reference/add_chronogram_axis.md)
+  : Add chronogram axis
+
+# Articles
+
+### All vignettes
+
+- [Get
+  Started](https://beeamerino.github.io/CactusPhylo/articles/CactusPhylo.md):
+- [Tutorial 1: Phylogenetic Pipeline: Data Assembly and
+  Preparation](https://beeamerino.github.io/CactusPhylo/articles/tutorial-1-cactus-phylogeny-prep.md):
+- [Tutorial 2: Phylogenetics Pipeline: Inference &
+  Dating](https://beeamerino.github.io/CactusPhylo/articles/tutorial-2-cactus-phylogeny-inference.md):
+- [Tutorial 3: Phylogenetics Pipeline: Data Visualization and IUCN
+  Summaries](https://beeamerino.github.io/CactusPhylo/articles/tutorial-3-cactus-phylogeny-visualization.md):
+- [Tutorial 4: Phylogenetic Validation and Sub-tree
+  Comparisons](https://beeamerino.github.io/CactusPhylo/articles/tutorial-4-cactus-phylogeny-validation.md):
+- [Tutorial 5: Function Reference &
+  Dictionary](https://beeamerino.github.io/CactusPhylo/articles/tutorial-5-cactus-phylogeny-functions.md):
