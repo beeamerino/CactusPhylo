@@ -16,3 +16,5 @@
 ^AGENTS\.md$
 
 ^data-raw$
+^docs$
+^pkgdown$

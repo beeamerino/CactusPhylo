@@ -549,7 +549,7 @@ if (file.exists(supp_tree_file) && nzchar(supp_tree_file)) {
 
 > To explore the complete topology in high resolution, you can view and download the tree poster here:
 >
-> [⬇️ Download Annotated Maximum-Likelihood Phylogeny with TBE Support (PDF)](https://github.com/beeamerino/CactusPhylo/blob/e2f42c5fdd60721a8ad17fa8c8fc3509af7becde/inst/extdata/Extended_ML_Phylogeny.pdf)
+> [⬇️ Download Annotated Maximum-Likelihood Phylogeny with TBE Support (PDF)](https://github.com/beeamerino/CactusPhylo/blob/ab196ef24a515330b9be9356e72741c0ef05585a/inst/extdata/Extended_ML_Phylogeny.pdf)
 
 If you wish to export the annotated `treedata` object into `.tree` (Nexus/BEAST format) to analyze in exterior software such as FigTree interactively, you can export it via treeio:
 
@@ -560,7 +560,7 @@ treeio::write.beast(annotated_treedata, file = "9_Visualization/figures/annotate
 
 > Alternatively, you can download the already computed `.tree` file natively from our repository:
 >
-> [⬇️ Download Annotated Maximum-Likelihood Phylogeny with TBE Support (.tree)](https://raw.githubusercontent.com/beeamerino/CactusPhylo/a1c7a88f5ddaa7bcf85ce09df67f97e9cffdc4a3/inst/extdata/cactus_support.raxml.support)
+> [⬇️ Download Annotated Maximum-Likelihood Phylogeny with TBE Support (.tree)](https://raw.githubusercontent.com/beeamerino/CactusPhylo/refs/heads/master/inst/extdata/cactus_support.raxml.support)
 
 #### Figure 15: Time-Calibrated Chronogram
 
@@ -654,7 +654,7 @@ if (file.exists(chrono_file) && nzchar(chrono_file)) {
 
 > To explore the precise ages of all clades in high resolution, you can view and download the chronogram poster here:
 >
-> [⬇️ Download Annotated Time-Calibrated Chronogram (PDF)](https://github.com/beeamerino/CactusPhylo/blob/e2f42c5fdd60721a8ad17fa8c8fc3509af7becde/inst/extdata/Extended_Chronogram.pdf)
+> [⬇️ Download Annotated Time-Calibrated Chronogram (PDF)](https://github.com/beeamerino/CactusPhylo/blob/ab196ef24a515330b9be9356e72741c0ef05585a/inst/extdata/Extended_Chronogram.pdf)
 
 If you wish to export the annotated chronogram `treedata` object into `.tree` (Nexus/BEAST format) to analyze in exterior software such as FigTree interactively, you can export it via treeio:
 
